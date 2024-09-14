@@ -25,8 +25,9 @@ To work with this repository, ensure you have the following installed:
 ``` bash
 git clone https://github.com/midofin/mido-finance.git
 cd mido-finance
-    ```
-### 2. Install dependencies
+```
+
+### Install dependencies
 ```bash
 pnpm install
 ```
@@ -38,7 +39,6 @@ To start the development server for the landing page:
 
 ```bash
 pnpm dev:landing
-By default, the app will be available at http://localhost:3000.
 ```
 
 ### Running the Core App (mido-app)
