@@ -12,8 +12,8 @@ Both applications are managed within the same repository using `pnpm` workspaces
 
 To work with this repository, ensure you have the following installed:
 
-- **Node.js**: Version 14 or later.
-- **pnpm**: Version 7 or later.
+- **Node.js**: Version 20 or later.
+- **pnpm**: Version 9 or later.
   - Install `pnpm` globally if you don't have it:
     ```
     npm install -g pnpm
@@ -22,14 +22,14 @@ To work with this repository, ensure you have the following installed:
 ## Installation
 
 ### 1. Clone the repository
-    ```
-    git clone https://github.com/midofin/mido-finance.git
-    cd mido-finance
+``` bash
+git clone https://github.com/midofin/mido-finance.git
+cd mido-finance
     ```
 ### 2. Install dependencies
-    ```bash
-    pnpm install
-    ```
+```bash
+pnpm install
+```
 ### 3. Development
 You can run each app independently using the pnpm workspace commands.
 
@@ -37,15 +37,15 @@ Running the Landing Page (mido-landing)
 To start the development server for the landing page:
 
 ```bash
-    pnpm dev:landing
-    By default, the app will be available at http://localhost:3000.
+pnpm dev:landing
+By default, the app will be available at http://localhost:3000.
 ```
 
 ### Running the Core App (mido-app)
 To start the development server for the core app:
 
 ```bash
-    pnpm dev:app
+pnpm dev:app
 ```
 By default, the app will be available at http://localhost:3000 or another available port.
 
