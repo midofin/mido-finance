@@ -1,12 +1,12 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { Programs } from "../target/types/programs";
+import { Stake } from "../target/types/stake";
 
-describe("programs", () => {
+describe("stake", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
 
-  const program = anchor.workspace.Programs as Program<Programs>;
+  const program = anchor.workspace.Stake as Program<Stake>;
 
   it("Is initialized!", async () => {
     // Add your test here.
