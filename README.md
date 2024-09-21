@@ -1,5 +1,7 @@
 # Mido Finance
 
+[Live Link](https://midofinance.com/)
+
 This repository contains two separate Next.js applications that together form the Mido Finance platform:
 
 - **`mido-landing`**: This is the landing page for the Mido platform. It contains information, marketing content, and promotional materials to attract new users.
