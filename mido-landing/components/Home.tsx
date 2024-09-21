@@ -1,9 +1,9 @@
 'use client'
 
-import React, { useState} from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { ChevronDown, DollarSign, BarChart2, Percent, Menu, X, ArrowRight, Sparkles, Shield, Globe } from 'lucide-react';
-
+import Link from 'next/link';
 const LandingPage = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { scrollYProgress } = useScroll();
@@ -151,7 +151,9 @@ const LandingPage = () => {
             ))}
           </nav>
           <div className="hidden md:block">
-            <GradientButton>Launch App</GradientButton>
+            <Link href="/stake">
+              <GradientButton>Launch App</GradientButton>
+            </Link>
           </div>
           <div className="md:hidden">
             <button onClick={() => setIsMenuOpen(!isMenuOpen)}>
