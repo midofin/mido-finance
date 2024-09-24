@@ -64,6 +64,9 @@ pnpm build:app
 ```
 The production-ready build for each app will be created in their respective .next directories.
 
+ORM: Prisma
+Server actions for backend.
+
 ### Contribution Guidelines
 Ensure that each app (mido-landing and mido-app) runs and builds successfully before committing changes.
 Use TypeScript for type safety in both projects.
