@@ -18,7 +18,7 @@ export async function getUser(walletAddress: string) {
 
 export async function createUser(walletAddress: string) {
     try {
-        const publicKey = new PublicKey(walletAddress);
+        new PublicKey(walletAddress);
     } catch (error) {
         return "Invalid Solana wallet address";
     }
