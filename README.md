@@ -1,5 +1,7 @@
 # Mido Finance
 
+[Live Link](https://midofinance.com/)
+
 This repository contains two separate Next.js applications that together form the Mido Finance platform:
 
 - **`mido-landing`**: This is the landing page for the Mido platform. It contains information, marketing content, and promotional materials to attract new users.
@@ -61,6 +63,9 @@ Building the Core App (mido-app)
 pnpm build:app
 ```
 The production-ready build for each app will be created in their respective .next directories.
+
+ORM: Prisma
+Server actions for backend.
 
 ### Contribution Guidelines
 Ensure that each app (mido-landing and mido-app) runs and builds successfully before committing changes.
