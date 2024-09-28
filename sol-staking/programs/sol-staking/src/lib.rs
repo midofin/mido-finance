@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Burn, Mint, MintTo, Token, TokenAccount };
 // use mpl_token_metadata::instruction as metadata_instruction;
 
-declare_id!("5Ayz56aU8xBPGAbe7EgaDqaoNQzT1NdB1Sg5FU6hhKGq");
+declare_id!("3rYML96UQicjeEFshfJEFugB7p28t7fmYWRLHSu84mQg");
 
 #[program]
 pub mod sol_staking {
@@ -32,30 +32,44 @@ pub mod sol_staking {
     }
 
     pub fn stake(ctx: Context<Stake>, amount: u64) -> Result<()> {
-        let _staking_pool = &ctx.accounts.staking_pool;
-
-        // Transfer SOL from the user to the treasury
+        let staking_pool = &ctx.accounts.staking_pool;
+        let staking_pool_key = staking_pool.key();
+        let seeds = &[b"treasury", staking_pool_key.as_ref()];
+        let (_, bump) = Pubkey::find_program_address(seeds, ctx.program_id);
+        let bump = &[bump];
+        let signer_seeds = &[b"treasury", staking_pool_key.as_ref(), bump];
+    
+        // Transfer SOL from the user to the treasury using invoke_signed
         let transfer_instruction = anchor_lang::solana_program::system_instruction::transfer(
             &ctx.accounts.user.key(),
             &ctx.accounts.treasury.key(),
             amount,
         );
-        anchor_lang::solana_program::program::invoke(
+        anchor_lang::solana_program::program::invoke_signed(
             &transfer_instruction,
             &[
                 ctx.accounts.user.to_account_info(),
                 ctx.accounts.treasury.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
             ],
+            &[signer_seeds],
         )?;
-
-        // Mint mSOL tokens to the user
-        token::mint_to(ctx.accounts.into_mint_context(), amount)?;
-
+    
+        // Mint mSOL tokens to the user using CPI
+        let cpi_accounts = MintTo {
+            mint: ctx.accounts.mint.to_account_info(),
+            to: ctx.accounts.user_msol_account.to_account_info(),
+            authority: ctx.accounts.mint_authority.to_account_info(),
+        };
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+        token::mint_to(cpi_ctx, amount)?;
+    
         emit!(StakeEvent {
             user: ctx.accounts.user.key(),
             amount,
         });
-
+    
         Ok(())
     }
 
