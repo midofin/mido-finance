@@ -1,6 +1,6 @@
 import * as anchor from "@project-serum/anchor";
 import { Program, AnchorProvider, web3 } from "@project-serum/anchor";
-import { SolStaking } from "../target/types/sol_staking";
+// import { SolStaking } from "../target/types/sol_staking";
 import { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY, Keypair } from "@solana/web3.js";
 import { BN } from "bn.js";
 import * as fs from 'fs';
@@ -9,7 +9,7 @@ async function main() {
   const provider = AnchorProvider.env();
   anchor.setProvider(provider);
 
-  const programId = new PublicKey("3rYML96UQicjeEFshfJEFugB7p28t7fmYWRLHSu84mQg");
+  const programId = new PublicKey("GKYMS6nUMankxjbqEyJecJ9ubwWLkWK7cf5f5RNMM9aJ");
   const idl = JSON.parse(fs.readFileSync('./target/idl/sol_staking.json', 'utf8'));
   const program = new anchor.Program(idl, programId, provider);
 

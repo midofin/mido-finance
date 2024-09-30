@@ -1,10 +1,8 @@
 import StakingPage from '@/components/Stake'
-import React from 'react'
+// import WalletConnectionProvider from '@/context/WalletContextProvider'
 
-export default function Stake() {
+export default function Home() {
   return (
-    <div>
-      <StakingPage/>
-    </div>
+    <StakingPage />
   )
 }

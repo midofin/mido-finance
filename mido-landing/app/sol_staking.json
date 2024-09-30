@@ -242,36 +242,6 @@
   ],
   "events": [
     {
-      "name": "ChangeAdminEvent",
-      "fields": [
-        {
-          "name": "oldAdmin",
-          "type": "publicKey",
-          "index": false
-        },
-        {
-          "name": "newAdmin",
-          "type": "publicKey",
-          "index": false
-        }
-      ]
-    },
-    {
-      "name": "CreateMetadataEvent",
-      "fields": [
-        {
-          "name": "mint",
-          "type": "publicKey",
-          "index": false
-        },
-        {
-          "name": "metadata",
-          "type": "publicKey",
-          "index": false
-        }
-      ]
-    },
-    {
       "name": "InitializeEvent",
       "fields": [
         {
@@ -335,6 +305,36 @@
           "index": false
         }
       ]
+    },
+    {
+      "name": "CreateMetadataEvent",
+      "fields": [
+        {
+          "name": "mint",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "metadata",
+          "type": "publicKey",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "ChangeAdminEvent",
+      "fields": [
+        {
+          "name": "oldAdmin",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "newAdmin",
+          "type": "publicKey",
+          "index": false
+        }
+      ]
     }
   ],
   "errors": [
@@ -370,6 +370,6 @@
     }
   ],
   "metadata": {
-    "address": "5Ayz56aU8xBPGAbe7EgaDqaoNQzT1NdB1Sg5FU6hhKGq"
+    "address": "GKYMS6nUMankxjbqEyJecJ9ubwWLkWK7cf5f5RNMM9aJ"
   }
 }
