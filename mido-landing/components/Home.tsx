@@ -155,11 +155,11 @@ const LandingPage = () => {
               <GradientButton>Launch App</GradientButton>
             </Link>
           </div>
-          <div className="hidden md:block">
+          {/* <div className="hidden md:block">
             <Link href="/user">
               <GradientButton>User</GradientButton>
             </Link>
-          </div>
+          </div> */}
           <div className="md:hidden">
             <button onClick={() => setIsMenuOpen(!isMenuOpen)}>
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}

@@ -23,7 +23,7 @@ import dynamic from "next/dynamic";
 import WalletContextProvider from "@/context/WalletContextProvider";
 import idl from "@/app/sol_staking.json";
 import { Program, AnchorProvider } from "@project-serum/anchor";
-
+import { allotPoints } from "@/app/actions/stake";
 // Dynamically import WalletMultiButton to avoid SSR issues
 const WalletMultiButtonDynamic = dynamic(
   async () => (await import("@solana/wallet-adapter-react-ui")).WalletMultiButton,
@@ -57,7 +57,6 @@ const StakingPage: React.FC = () => {
     return new Intl.NumberFormat("en-US").format(num);
   };
 
-  // Extract Program ID from IDL
   const programId = useMemo(() => new PublicKey(idl.metadata.address), []);
 
   const anchorWallet = useAnchorWallet();
@@ -190,6 +189,7 @@ const StakingPage: React.FC = () => {
   };
 
   // Handle Stake Function
+
   const handleStake = async () => {
     if (!publicKey || !program || !anchorWallet || !mintPublicKey || !mintAuthorityPda || !stakingPoolPublicKey || !treasuryPda) {
       console.error("Wallet not connected or program not initialized");
@@ -293,6 +293,8 @@ const StakingPage: React.FC = () => {
         description: `Successfully staked ${stakeAmountSOL} SOL. Transaction: ${signature.slice(0, 8)}...`,
         variant: "default",
       });
+
+      const points = await allotPoints(publicKey.toBase58());
 
       // Update balances
       await getWalletBalance();
