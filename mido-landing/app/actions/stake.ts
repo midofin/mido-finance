@@ -7,38 +7,38 @@ import { getAssociatedTokenAddress, getAccount } from '@solana/spl-token';
 const MINT_ADDRESS = '9Fe45EXDuNNqMbQtDj2CyiSp1CG8j4twuiqztsr9Jqo1';
 
 export async function allotPoints(walletAddress: string) {
-    const user = await client.user.findUnique({
-      where: {
-        walletAddress,
-      },
-    });
+  const user = await client.user.findUnique({
+    where: {
+      walletAddress,
+    },
+  });
 
-    if (!user) {
-      return "User not found";
-    }
+  if (!user) {
+    return "User not found";
+  }
 
-    // Move to .env
-    const connection = new Connection('https://api.devnet.solana.com');
+  // Move to .env
+  const connection = new Connection('https://api.devnet.solana.com');
 
-    const ataAddress = await getAssociatedTokenAddress(
-      new PublicKey(MINT_ADDRESS),
-      new PublicKey(walletAddress)
-    );
-    const ataAccountInfo = await getAccount(connection, ataAddress);
+  const ataAddress = await getAssociatedTokenAddress(
+    new PublicKey(MINT_ADDRESS),
+    new PublicKey(walletAddress)
+  );
+  const ataAccountInfo = await getAccount(connection, ataAddress);
 
-    const stakedAmount = Number(ataAccountInfo.amount) / 1_000_000_000;
+  const stakedAmount = Number(ataAccountInfo.amount) / 1_000_000_000;
 
-    const pointsPerSol = 500;
-    const points = stakedAmount * pointsPerSol;
+  const pointsPerSol = 500;
+  const points = stakedAmount * pointsPerSol;
 
-    const updatedUser = await client.user.update({
-      where: {
-        id: user.id,
-      },
-      data: {
-        points: user.points + points,
-      },
-    });
+  const updatedUser = await client.user.update({
+    where: {
+      id: user.id,
+    },
+    data: {
+      points: user.points + points,
+    },
+  });
 
-    return updatedUser
+  return { updatedUser, mSolAccount: stakedAmount, points };
 }
