@@ -78,14 +78,14 @@ const StakingPage: React.FC = () => {
   }, [anchorProvider, programId]);
 
   // Define the staking pool public key (Replace with your actual staking pool public key)
-  const stakingPoolPublicKey = useMemo(() => new PublicKey("B2CKtT3u3MXADsz8oTJpudWBFu9xfHfXVBeWDe65P6FG"), []);
+  const stakingPoolPublicKey = useMemo(() => new PublicKey("C6iSFRBLsPwCZ3JZy376UHC8FPpy978iQukRMpM8ugdU"), []);
 
   // Define PDAs as PublicKey instances
   const [mintAuthorityPda, setMintAuthorityPda] = useState<PublicKey | null>(null);
   const [treasuryPda, setTreasuryPda] = useState<PublicKey | null>(null);
 
   // Define Mint PublicKey
-  const mintPublicKey = useMemo(() => new PublicKey("E7GnthwndhRZvwwHp5MjzPYaq9zu5eTY2rDGyH3SRXLo"), []);
+  const mintPublicKey = useMemo(() => new PublicKey("DHWAnFMCS7nFYdVeiCNqmhANFfDrLMzLfPEVkfQM78Mh"), []);
 
   // Derive PDAs
   useEffect(() => {

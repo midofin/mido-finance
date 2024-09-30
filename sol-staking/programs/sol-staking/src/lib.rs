@@ -4,7 +4,7 @@ use anchor_spl::token::{self, Burn, Mint, MintTo, Token, TokenAccount};
 // Uncomment if using Metaplex for metadata
 // use mpl_token_metadata::instruction as metadata_instruction;
 
-declare_id!("GKYMS6nUMankxjbqEyJecJ9ubwWLkWK7cf5f5RNMM9aJ");
+declare_id!("2bkxhcxzEQcMzyL3V5BJV9iGVKMG9ozQCSqWsdAC3h6o");
 
 #[program]
 pub mod sol_staking {
@@ -117,13 +117,32 @@ pub mod sol_staking {
         // Burn mSOL tokens from the user
         token::burn(ctx.accounts.into_burn_context(), amount)?;
 
-        // Transfer SOL from treasury back to the user
-        **ctx
-            .accounts
-            .treasury
-            .to_account_info()
-            .try_borrow_mut_lamports()? -= amount;
-        **ctx.accounts.user.try_borrow_mut_lamports()? += amount;
+        let staking_pool = &ctx.accounts.staking_pool;
+        let staking_pool_key = staking_pool.key();
+
+        let treasury_seeds = &[b"treasury", staking_pool_key.as_ref()];
+        let (_, treasury_bump) = Pubkey::find_program_address(treasury_seeds, ctx.program_id);
+
+        let transfer_instruction = anchor_lang::solana_program::system_instruction::transfer(
+            &ctx.accounts.treasury.key(),
+            &ctx.accounts.user.key(),
+            amount,
+        );
+
+        // Invoke the transfer instruction with signer seeds
+        anchor_lang::solana_program::program::invoke_signed(
+            &transfer_instruction,
+            &[
+                ctx.accounts.treasury.to_account_info(),
+                ctx.accounts.user.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
+            ],
+            &[&[
+                b"treasury",
+                staking_pool_key.as_ref(),
+                &[treasury_bump],
+            ]],
+        )?;
 
         emit!(UnstakeEvent {
             user: ctx.accounts.user.key(),
@@ -353,14 +372,8 @@ pub struct Unstake<'info> {
     #[account(mut)]
     pub mint: Account<'info, Mint>,
 
-    /// CHECK: This is safe because it's a PDA that is the mint authority
-    #[account(
-        seeds = [b"mint_authority", staking_pool.key().as_ref()],
-        bump,
-    )]
-    pub mint_authority: AccountInfo<'info>,
-
     pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
