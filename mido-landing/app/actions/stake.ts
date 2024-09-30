@@ -4,9 +4,11 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { getAssociatedTokenAddress, getAccount } from '@solana/spl-token';
 
 // Currently for devnet. TODO: Move to .env
-const MINT_ADDRESS = '9Fe45EXDuNNqMbQtDj2CyiSp1CG8j4twuiqztsr9Jqo1';
+const MINT_ADDRESS = 'DHWAnFMCS7nFYdVeiCNqmhANFfDrLMzLfPEVkfQM78Mh';
 
 export async function allotPoints(walletAddress: string) {
+
+  console.log(walletAddress, "wllaetaddress")
   const user = await client.user.findUnique({
     where: {
       walletAddress,
