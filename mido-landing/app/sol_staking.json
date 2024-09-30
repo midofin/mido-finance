@@ -141,12 +141,12 @@
           "isSigner": false
         },
         {
-          "name": "mintAuthority",
+          "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
         },
         {
-          "name": "tokenProgram",
+          "name": "systemProgram",
           "isMut": false,
           "isSigner": false
         }
@@ -242,6 +242,36 @@
   ],
   "events": [
     {
+      "name": "ChangeAdminEvent",
+      "fields": [
+        {
+          "name": "oldAdmin",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "newAdmin",
+          "type": "publicKey",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "CreateMetadataEvent",
+      "fields": [
+        {
+          "name": "mint",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "metadata",
+          "type": "publicKey",
+          "index": false
+        }
+      ]
+    },
+    {
       "name": "InitializeEvent",
       "fields": [
         {
@@ -305,36 +335,6 @@
           "index": false
         }
       ]
-    },
-    {
-      "name": "CreateMetadataEvent",
-      "fields": [
-        {
-          "name": "mint",
-          "type": "publicKey",
-          "index": false
-        },
-        {
-          "name": "metadata",
-          "type": "publicKey",
-          "index": false
-        }
-      ]
-    },
-    {
-      "name": "ChangeAdminEvent",
-      "fields": [
-        {
-          "name": "oldAdmin",
-          "type": "publicKey",
-          "index": false
-        },
-        {
-          "name": "newAdmin",
-          "type": "publicKey",
-          "index": false
-        }
-      ]
     }
   ],
   "errors": [
@@ -370,6 +370,6 @@
     }
   ],
   "metadata": {
-    "address": "GKYMS6nUMankxjbqEyJecJ9ubwWLkWK7cf5f5RNMM9aJ"
+    "address": "2bkxhcxzEQcMzyL3V5BJV9iGVKMG9ozQCSqWsdAC3h6o"
   }
 }
