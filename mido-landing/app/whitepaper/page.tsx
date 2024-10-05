@@ -5,6 +5,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Leaf, Zap, ArrowRight, Shield, DollarSign, Repeat, List, Handshake } from "lucide-react";
+import Navbar from "@/components/navbar";
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -72,7 +73,8 @@ const RoadmapItem: React.FC<RoadmapItemProps> = ({ title, description, index }) 
 const MIDOFinanceWhitepaper = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 text-white">
-      <header className="bg-gray-900 py-8 border-b border-green-500/30">
+        <Navbar />
+      <header className="pt-32 bg-gray-900 py-8 border-b border-green-500/30">
         <div className="container mx-auto px-4">
           <h1 className="text-5xl font-bold text-green-400 text-center">MIDO Finance Whitepaper</h1>
         </div>
