@@ -23,9 +23,9 @@ interface NavLink {
 
 const navLinks: NavLink[] = [
   { name: 'Home', href: '/' },
+  { name: 'Whitepaper', href: '/whitepaper' },
   { name: 'User', href: '/user' },
   { name: 'Leaderboard', href: '/leaderboard' },
-  { name: 'NFTs', href: '#nfts' },
   { name: 'Roadmap', href: '#roadmap' },
 ]
 

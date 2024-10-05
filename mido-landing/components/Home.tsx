@@ -218,7 +218,7 @@ const LandingPage: React.FC = () => {
             </div>
           </div>
           <div className="mt-8 text-center text-gray-500">
-            <p>&copy; 2023 MIDO Finance. All rights reserved.</p>
+            <p>&copy; 2024 MIDO Finance. All rights reserved.</p>
           </div>
         </footer>
 

@@ -594,7 +594,7 @@ const UserProfile: React.FC = () => {
                 <p className="text-gray-400">
                   Wallet:{" "}
                   {wallet.publicKey
-                    ? wallet.publicKey.toBase58()
+                    ? wallet.publicKey.toBase58().split("").splice(0, 6).join("") + "..." + wallet.publicKey.toBase58().split("").splice(-6).join("")
                     : "Not connected"}
                 </p>
                 <Badge className="mt-2 bg-green-600">
