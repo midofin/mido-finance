@@ -2,7 +2,7 @@
 // components/Navbar.tsx
 
 "use client"
-
+import Logo from "../components/images/logo.png";
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -15,6 +15,7 @@ import {
 import { useRouter } from 'next/navigation'
 import GradientButton from './landing/GradientButton'
 import Link from 'next/link'
+import Image from 'next/image'
 
 interface NavLink {
   name: string
@@ -43,6 +44,8 @@ const Navbar: React.FC = () => {
       <div className="container mx-auto px-4 py-4 flex justify-between items-center">
         {/* Logo */}
         <Link href="/">
+        <div className="flex items-center">
+        <Image src={Logo} alt="MIDO Finance" width={60} height={60} />
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -51,6 +54,7 @@ const Navbar: React.FC = () => {
         >
           MIDO Finance
         </motion.div>
+        </div>
         </Link>
 
         {/* Desktop Navigation */}
