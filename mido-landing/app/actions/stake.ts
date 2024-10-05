@@ -1,14 +1,18 @@
-"use server"
+// actions/stake.ts
+"use server";
 import client from "@/db";
 import { Connection, PublicKey } from '@solana/web3.js';
 import { getAssociatedTokenAddress, getAccount } from '@solana/spl-token';
 
-// Currently for devnet. TODO: Move to .env
-const MINT_ADDRESS = 'DHWAnFMCS7nFYdVeiCNqmhANFfDrLMzLfPEVkfQM78Mh';
+const MINT_ADDRESS = process.env.MINT_ADDRESS || '';
+const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com';
 
 export async function allotPoints(walletAddress: string) {
+  if (!MINT_ADDRESS) {
+    throw new Error("MINT_ADDRESS is not defined in environment variables.");
+  }
 
-  console.log(walletAddress, "wllaetaddress")
+  console.log(walletAddress, "walletAddress");
   const user = await client.user.findUnique({
     where: {
       walletAddress,
@@ -19,8 +23,7 @@ export async function allotPoints(walletAddress: string) {
     return "User not found";
   }
 
-  // Move to .env
-  const connection = new Connection('https://api.devnet.solana.com');
+  const connection = new Connection(SOLANA_RPC_URL);
 
   const ataAddress = await getAssociatedTokenAddress(
     new PublicKey(MINT_ADDRESS),

@@ -24,6 +24,9 @@ import WalletContextProvider from "@/context/WalletContextProvider";
 import idl from "@/app/sol_staking.json";
 import { Program, AnchorProvider } from "@project-serum/anchor";
 import { allotPoints } from "@/app/actions/stake";
+import { getUser, createUser } from "@/app/actions/user"; // Ensure correct import path
+import Navbar from "./navbar";
+
 // Dynamically import WalletMultiButton to avoid SSR issues
 const WalletMultiButtonDynamic = dynamic(
   async () => (await import("@solana/wallet-adapter-react-ui")).WalletMultiButton,
@@ -43,9 +46,9 @@ const apyHistory = [
 const StakingPage: React.FC = () => {
   const { toast } = useToast();
   const [balance, setBalance] = useState<number | null>(null);
-  const [miSOLBalance, setMiSOLBalance] = useState<number | null>(null); // New state for miSOL balance
+  const [miSOLBalance, setMiSOLBalance] = useState<number | null>(null); // miSOL balance
   const [stakeAmountSOL, setStakeAmountSOL] = useState("");
-  const [unstakeAmountMiSOL, setUnstakeAmountMiSOL] = useState(""); // New state for unstake amount
+  const [unstakeAmountMiSOL, setUnstakeAmountMiSOL] = useState(""); // Unstake amount
   const [stakeDuration, setStakeDuration] = useState(30);
   const [estimatedRewards, setEstimatedRewards] = useState(0);
   const [totalValueLocked, setTotalValueLocked] = useState(1000000); // Mock TVL
@@ -57,21 +60,32 @@ const StakingPage: React.FC = () => {
     return new Intl.NumberFormat("en-US").format(num);
   };
 
-  const programId = useMemo(() => new PublicKey(idl.metadata.address), []);
+  const programId = useMemo(() => {
+    if (!idl.metadata || !idl.metadata.address) {
+      console.error("IDL metadata.address is missing");
+      toast({
+        title: "Configuration Error",
+        description: "Program ID is not set in the IDL file.",
+        variant: "destructive",
+      });
+      return null;
+    }
+    return new PublicKey(idl.metadata.address);
+  }, [idl.metadata, toast]);
 
   const anchorWallet = useAnchorWallet();
   const { connection } = useConnection();
   const { publicKey } = useWallet();
 
   const anchorProvider = useMemo(() => {
-    if (anchorWallet) {
+    if (anchorWallet && programId) {
       return new anchor.AnchorProvider(connection, anchorWallet, anchor.AnchorProvider.defaultOptions());
     }
     return null;
-  }, [connection, anchorWallet]);
+  }, [connection, anchorWallet, programId]);
 
   const program = useMemo(() => {
-    if (anchorProvider) {
+    if (anchorProvider && programId) {
       return new anchor.Program(idl as any, programId, anchorProvider);
     }
     return null;
@@ -142,7 +156,7 @@ const StakingPage: React.FC = () => {
 
       // Example: Simple APY calculation
       const stakeSOL = parseFloat(stakeAmountSOL);
-      const rewards = stakeSOL * (currentApy / 100) * (stakeDuration / 365);
+      const rewards = stakeSOL;
       setEstimatedRewards(rewards);
     };
 
@@ -182,16 +196,28 @@ const StakingPage: React.FC = () => {
       const msolBalance = msolAccountInfo.value.uiAmount || 0;
       setMiSOLBalance(msolBalance);
       console.log(`miSOL Balance: ${msolBalance} miSOL`);
-    } catch (error) {
-      console.error("Failed to get miSOL balance:", error);
-      setMiSOLBalance(null);
+    } catch (error: any) {
+      if (error.code === "AccountNotFound") {
+        console.warn("miSOL ATA not found. Setting balance to 0.");
+        setMiSOLBalance(0);
+      } else {
+        console.error("Failed to get miSOL balance:", error);
+        setMiSOLBalance(null);
+      }
     }
   };
 
   // Handle Stake Function
-
   const handleStake = async () => {
-    if (!publicKey || !program || !anchorWallet || !mintPublicKey || !mintAuthorityPda || !stakingPoolPublicKey || !treasuryPda) {
+    if (
+      !publicKey ||
+      !program ||
+      !anchorWallet ||
+      !mintPublicKey ||
+      !mintAuthorityPda ||
+      !stakingPoolPublicKey ||
+      !treasuryPda
+    ) {
       console.error("Wallet not connected or program not initialized");
       toast({
         title: "Wallet not connected",
@@ -200,7 +226,7 @@ const StakingPage: React.FC = () => {
       });
       return;
     }
-
+  
     if (parseFloat(stakeAmountSOL) <= 0) {
       console.error("Invalid stake amount");
       toast({
@@ -210,18 +236,56 @@ const StakingPage: React.FC = () => {
       });
       return;
     }
-
+  
     try {
       console.log("Initiating stake...");
-
+  
+      // **Check if user exists in backend**
+      const userResponse = await getUser(publicKey.toBase58());
+  
+      let user;
+      if (userResponse === "User not found") {
+        console.log("User not found in DB. Creating new user...");
+        const createUserResponse = await createUser(publicKey.toBase58());
+  
+        if (createUserResponse === "Invalid Solana wallet address") {
+          toast({
+            title: "Error",
+            description: "Invalid Solana wallet address.",
+            variant: "destructive",
+          });
+          return;
+        }
+  
+        if (typeof createUserResponse === "string" && createUserResponse === "User already exists") {
+          toast({
+            title: "Error",
+            description: "User already exists in the database.",
+            variant: "destructive",
+          });
+          return;
+        }
+  
+        user = createUserResponse;
+        console.log("User created:", user);
+        toast({
+          title: "User Created",
+          description: "Your account has been created in the backend.",
+          variant: "default",
+        });
+      } else {
+        user = userResponse;
+        console.log("User found:", user);
+      }
+  
       // Derive user's miSOL account
       const userMsolAccount = await getAssociatedTokenAddress(mintPublicKey, publicKey);
       console.log(`User's miSOL ATA: ${userMsolAccount.toBase58()}`);
-
+  
       // Check if user miSOL account exists
       const userMsolAccountInfo = await connection.getAccountInfo(userMsolAccount);
       const tx = new Transaction();
-
+  
       if (!userMsolAccountInfo) {
         console.log("miSOL ATA does not exist. Creating ATA...");
         // Create associated token account if it doesn't exist
@@ -235,11 +299,11 @@ const StakingPage: React.FC = () => {
       } else {
         console.log("miSOL ATA exists.");
       }
-
+  
       // Define the stake amount in lamports
       const amountLamports = Math.floor(parseFloat(stakeAmountSOL) * LAMPORTS_PER_SOL);
       console.log(`Staking Amount: ${amountLamports} lamports`);
-
+  
       // Create stake instruction
       const stakeIx = await program.methods
         .stake(new anchor.BN(amountLamports))
@@ -254,24 +318,24 @@ const StakingPage: React.FC = () => {
           systemProgram: SystemProgram.programId,
         })
         .instruction();
-
+  
       console.log("Adding stake instruction to transaction...");
       tx.add(stakeIx);
       tx.feePayer = publicKey;
-
+  
       // Fetch latest blockhash
       console.log("Fetching latest blockhash...");
       const latestBlockhash = await connection.getLatestBlockhash();
       tx.recentBlockhash = latestBlockhash.blockhash;
-
+  
       // Sign and send transaction
       console.log("Signing transaction...");
       const signedTx = await anchorWallet.signTransaction(tx);
       console.log("Sending transaction...");
       const signature = await connection.sendRawTransaction(signedTx.serialize());
-
+  
       console.log(`Transaction Signature: ${signature}`);
-
+  
       // Confirm transaction
       console.log("Confirming transaction...");
       const confirmation = await connection.confirmTransaction(
@@ -282,29 +346,52 @@ const StakingPage: React.FC = () => {
         },
         "confirmed"
       );
-
+  
       if (confirmation.value.err) {
         throw new Error("Transaction failed");
       }
-
+  
       console.log("Staking Successful!");
       toast({
         title: "Staking Successful",
         description: `Successfully staked ${stakeAmountSOL} SOL. Transaction: ${signature.slice(0, 8)}...`,
         variant: "default",
       });
-
-      const points = await allotPoints(publicKey.toBase58());
-
+  
+      // **Allot Points after successful staking**
+      const pointsResponse = await allotPoints(publicKey.toBase58());
+  
+      if (pointsResponse === "User not found") {
+        toast({
+          title: "Error",
+          description: "User not found in the backend after staking.",
+          variant: "destructive",
+        });
+      } else if (typeof pointsResponse === "string") {
+        // Handle other string responses if any
+        toast({
+          title: "Error",
+          description: pointsResponse,
+          variant: "destructive",
+        });
+      } else {
+        console.log("Points Allotted:", pointsResponse.points);
+        toast({
+          title: "Points Allotted",
+          description: `You have earned ${pointsResponse.points} points.`,
+          variant: "default",
+        });
+      }
+  
       // Update balances
       await getWalletBalance();
       await getMiSOLBalance();
-
+  
       // Reset stake amount
       setStakeAmountSOL("");
     } catch (error: any) {
       console.error("Staking error:", error);
-
+  
       // Attempt to fetch transaction logs if available
       if (error.message.includes("Simulation failed")) {
         try {
@@ -332,7 +419,7 @@ const StakingPage: React.FC = () => {
       }
     }
   };
-
+  
   // Handle Unstake Function
   const handleUnstake = async () => {
     if (!publicKey || !program || !anchorWallet || !mintPublicKey || !mintAuthorityPda || !stakingPoolPublicKey || !treasuryPda) {
@@ -466,8 +553,9 @@ const StakingPage: React.FC = () => {
   return (
     <WalletContextProvider>
       <div className="min-h-screen bg-gray-900 text-white p-4">
+          <Navbar/>
         <div className="max-w-6xl mx-auto space-y-6">
-          <h1 className="text-4xl font-bold text-center text-green-400">MIDO Finance Staking</h1>
+          <h1 className="text-4xl pt-24 font-bold text-center text-green-400">MIDO Finance Staking</h1>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Staking Card */}
@@ -480,15 +568,31 @@ const StakingPage: React.FC = () => {
                 {publicKey ? (
                   <>
                     {/* Wallet Balance */}
-                    <div className="text-white flex justify-between">
-                      <h2>Wallet Balance</h2>
-                      {balance !== null ? <p>{balance.toFixed(4)} SOL</p> : <p>Loading balance...</p>}
+                    <div className="text-white flex justify-between items-center">
+                      <h2 className="flex items-center">
+                        <TrendingUp className="mr-2" /> Wallet Balance
+                      </h2>
+                      {balance !== null ? (
+                        <p className="text-green-400">{balance.toFixed(4)} SOL</p>
+                      ) : (
+                        <p>Loading balance...</p>
+                      )}
                     </div>
 
                     {/* miSOL Balance */}
-                    <div className="text-white flex justify-between">
-                      <h2>miSOL Balance</h2>
-                      {miSOLBalance !== null ? <p>{miSOLBalance.toFixed(4)} miSOL</p> : <p>Loading miSOL balance...</p>}
+                    <div className="text-white flex justify-between items-center">
+                      <h2 className="flex items-center">
+                        <Lock className="mr-2" /> miSOL Balance
+                      </h2>
+                      {miSOLBalance !== null ? (
+                        miSOLBalance > 0 ? (
+                          <p className="text-green-400">{miSOLBalance.toFixed(4)} miSOL</p>
+                        ) : (
+                          <p className="text-gray-400">No miSOL staked.</p>
+                        )
+                      ) : (
+                        <p>Loading miSOL balance...</p>
+                      )}
                     </div>
                   </>
                 ) : (

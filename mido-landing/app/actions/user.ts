@@ -1,4 +1,4 @@
-"user server";
+"use server";
 import client from "@/db";
 import { PublicKey } from '@solana/web3.js';
 
