@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import WalletContextProvider from "@/context/WalletContextProvider";
+import ParticleBackground from "@/components/landing/SplineBackground";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -27,6 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <WalletContextProvider>
+      <ParticleBackground />
 
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}

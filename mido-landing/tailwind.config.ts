@@ -9,6 +9,10 @@ const config: Config = {
   ],
   theme: {
   	extend: {
+		fontFamily: {
+			montserrat: ['"Montserrat Alternates"', 'sans-serif'],
+			lato: ['"Lato"', 'sans-serif'],	
+		},
   		colors: {
   			background: 'var(--background)',
   			foreground: 'var(--foreground)'
