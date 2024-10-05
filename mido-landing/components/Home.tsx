@@ -18,6 +18,7 @@ import {
   Leaf
 } from 'lucide-react'
 import Navbar from './navbar'
+import { useRouter } from 'next/navigation'
 
 const LandingPage: React.FC = () => {
   const { scrollYProgress } = useScroll()
@@ -35,6 +36,12 @@ const LandingPage: React.FC = () => {
       },
     },
   }
+
+  const router = useRouter()
+
+  const handleLaunchApp = () => {
+    router.push('/stake')
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white overflow-hidden relative font-sans">
@@ -61,7 +68,7 @@ const LandingPage: React.FC = () => {
               Earn creamy rewards and invest in a sustainable future with our ReFi platform.
             </motion.p>
             <motion.div variants={fadeInUp}>
-              <GradientButton className="text-lg px-12 py-4" onClick={() => {}}>Stake Now</GradientButton>
+              <GradientButton className="text-lg px-12 py-4" onClick={handleLaunchApp}>Stake Now</GradientButton>
             </motion.div>
           </motion.div>
         </section>
