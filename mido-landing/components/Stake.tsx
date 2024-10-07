@@ -466,7 +466,7 @@ const StakingPage: React.FC = () => {
               transition={{ duration: 0.5 }}
               className="text-5xl font-bold text-center text-green-400 mb-12"
             >
-              MIDO Finance Staking
+              MIDO Liquid Staking
             </motion.h1>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
