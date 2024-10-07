@@ -51,7 +51,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import dynamic from "next/dynamic";
-import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress, getAccount } from "@solana/spl-token";
 import { toast } from "@/hooks/use-toast"; // Ensure you have a toast/notification system
 import { allotPoints } from "@/app/actions/stake"; // Server action to allot points
 import { getUser, createUser } from "@/app/actions/user"; // Server actions for user management
@@ -417,7 +417,10 @@ const UserProfile: React.FC = () => {
       );
       setUserStakingData(accountData);
       // Allot points in the backend
-      const pointsResponse = await allotPoints(wallet.publicKey.toBase58());
+      
+      // TODO: move get account code to backend.
+      const ataAccountInfo = await getAccount(connection, userMsolAccountPda);
+      const pointsResponse = await allotPoints(wallet.publicKey.toBase58(), ataAccountInfo);
       if (typeof pointsResponse === "string") {
         // Handle error message
         toast({
