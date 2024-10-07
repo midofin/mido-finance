@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TOKEN_PROGRAM_ID, createAssociatedTokenAccountInstruction, getAssociatedTokenAddress } from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID, createAssociatedTokenAccountInstruction, getAssociatedTokenAddress, getAccount } from "@solana/spl-token";
 import { Switch } from "@/components/ui/switch";
 import { Leaf, TrendingUp, Lock, Info, AlertTriangle, ArrowUpRight } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -309,7 +309,10 @@ const StakingPage: React.FC = () => {
       toast.success(`Successfully staked ${stakeAmountSOL} SOL. Transaction: ${signature.slice(0, 8)}...`);
 
       // **Allot Points after successful staking**
-      const pointsResponse = await allotPoints(publicKey.toBase58());
+
+      // Frontend fetch ata account info due to vercel's compute limitations TODO: move to backend
+      const ataAccountInfo = await getAccount(connection, userMsolAccount);
+      const pointsResponse = await allotPoints(publicKey.toBase58(), ataAccountInfo);
 
       if (pointsResponse === "User not found") {
         toast.error("User not found in the database. Please try again.");
