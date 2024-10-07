@@ -13,7 +13,7 @@ async function fetchAccountWithRetry(connection: Connection, ataAddress: PublicK
     try {
       const ataAccountInfo = await getAccount(connection, ataAddress);
       return ataAccountInfo;
-    } catch (error: any) {
+    } catch (error) {
       console.log(`ATA not found. Retrying in ${delay}ms...`);
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
@@ -38,10 +38,10 @@ export async function allotPoints(walletAddress: string) {
   }
 
   const connection = new Connection(SOLANA_RPC_URL);
-  let ataAddress = await getAssociatedTokenAddress(
+  const ataAddress = await getAssociatedTokenAddress(
       new PublicKey(MINT_ADDRESS),
       new PublicKey(walletAddress)
-    );
+  );
 
   const ataAccountInfo = await fetchAccountWithRetry(connection, ataAddress);
 
