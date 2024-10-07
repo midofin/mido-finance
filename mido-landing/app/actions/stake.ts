@@ -2,7 +2,7 @@
 "use server";
 import client from "@/db";
 import { Connection, PublicKey } from '@solana/web3.js';
-import { getAssociatedTokenAddress, getAccount } from '@solana/spl-token';
+import { getAssociatedTokenAddress, getAccount, Account } from '@solana/spl-token';
 
 const MINT_ADDRESS = process.env.MINT_ADDRESS || '';
 const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com';
@@ -21,7 +21,7 @@ async function fetchAccountWithRetry(connection: Connection, ataAddress: PublicK
   throw new Error("Failed to fetch ATA after multiple retries.");
 }
 
-export async function allotPoints(walletAddress: string) {
+export async function allotPoints(walletAddress: string, ataAccount: Account) {
   if (!MINT_ADDRESS) {
     throw new Error("MINT_ADDRESS is not defined in environment variables.");
   }
@@ -43,7 +43,9 @@ export async function allotPoints(walletAddress: string) {
       new PublicKey(walletAddress)
   );
 
-  const ataAccountInfo = await fetchAccountWithRetry(connection, ataAddress);
+  // This won't work on vercel because of compute limit, frontend impl for now. TODO: backend impl
+  // const ataAccountInfo = await fetchAccountWithRetry(connection, ataAddress);
+  const ataAccountInfo = ataAccount;
 
   const stakedAmount = Number(ataAccountInfo.amount) / 1_000_000_000;
 
