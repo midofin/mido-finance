@@ -2,9 +2,8 @@
 
 [Live Link](https://midofinance.com/)
 
-This repository contains two separate Next.js applications that together form the Mido Finance platform:
-
-- **`mido-landing`**: This is the landing page for the Mido platform. It contains information, marketing content, and promotional materials to attract new users.
+- **`mido-landing`**: This is the main application for the Mido platform. It contains the landing page, the core staking app, and the backend.
+- **`sol-staking`**: This is a Solana anchor program that allows users to stake and unstake their SOL.
 
 ## Project Structure
 ## Prerequisites
