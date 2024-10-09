@@ -5,10 +5,7 @@
     "scripts": {
       "dev:landing": "pnpm --filter mido-landing dev",
       "build:landing": "pnpm --filter mido-landing build",
-      "start:landing": "pnpm --filter mido-landing start",
-      "dev:app": "pnpm --filter mido-app dev",
-      "build:app": "pnpm --filter mido-app build",
-      "start:app": "pnpm --filter mido-app start"
+      "start:landing": "pnpm --filter mido-landing start"
     }
   }
   

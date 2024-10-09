@@ -94,7 +94,7 @@ export default function Leaderboard() {
                         transition={{ duration: 0.5 }}
                         className="text-5xl font-extrabold text-center text-transparent bg-clip-text bg-gradient-to-r from-[#3b683b] to-[#00ffff] py-4"
                     >
-                        Stakers Leaderboard
+                        Leaderboard
                     </motion.h1>
 
                     <Card className="bg-[#1a1b3e] border-[#317431] border-2 shadow-[0_0_20px_rgba(0,255,0,0.3)]">
