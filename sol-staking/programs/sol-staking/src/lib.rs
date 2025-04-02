@@ -5,6 +5,15 @@ use anchor_spl::token::{self, Burn, Mint, MintTo, Token, TokenAccount};
 // use mpl_token_metadata::instruction as metadata_instruction;
 
 declare_id!("F5XkWN1H23Axp34UgZkymELSVKLkXBRzTHq8QmUsggCo");
+// At the top of the file, uncomment:
+use mpl_token_metadata::instructions::create_metadata_accounts_v3;
+use mpl_token_metadata::state::DataV2;
+use anchor_spl::token::{Mint, TokenAccount};
+use mpl_token_metadata::ID as TOKEN_METADATA_PROGRAM_ID;
+
+// Add this dependency in Cargo.toml:
+// mpl-token-metadata = "1.9.1"
+declare_id!("2bkxhcxzEQcMzyL3V5BJV9iGVKMG9ozQCSqWsdAC3h6o");
 
 #[program]
 pub mod sol_staking {
@@ -20,6 +29,7 @@ pub mod sol_staking {
         staking_pool.mint_bump = mint_bump;
         staking_pool.treasury = ctx.accounts.treasury.key();
         staking_pool.admin = ctx.accounts.admin.key();
+        staking_pool.upgrade_authority = ctx.accounts.admin.key();
         staking_pool.withdrawal_limit = withdrawal_limit;
         staking_pool.last_withdrawal = 0;
         staking_pool.time_lock = time_lock;
@@ -57,14 +67,13 @@ pub mod sol_staking {
             amount,
         );
 
-        anchor_lang::solana_program::program::invoke_signed(
+        anchor_lang::solana_program::program::invoke(
             &transfer_instruction,
             &[
                 ctx.accounts.user.to_account_info(),
                 ctx.accounts.treasury.to_account_info(),
                 ctx.accounts.system_program.to_account_info(),
             ],
-            treasury_signer_seeds,
         )?;
 
         // Mint mSOL tokens to the user using CPI with signer seeds
@@ -197,70 +206,60 @@ pub mod sol_staking {
     }
 
     // Uncomment if using Metaplex for metadata
-    /*
     pub fn create_metadata(
         ctx: Context<CreateMetadata>,
         name: String,
         symbol: String,
         uri: String,
     ) -> Result<()> {
-        let seeds = &[b"mint_authority", ctx.accounts.staking_pool.key().as_ref()];
-        let (_, bump) = Pubkey::find_program_address(seeds, ctx.program_id);
-        let signer_seeds = &[
-            b"mint_authority",
-            ctx.accounts.staking_pool.key().as_ref(),
-            &[bump],
+        let metadata_seeds = &[b"metadata", ctx.accounts.mint.key().as_ref()];
+        let signer_seeds = &[&metadata_seeds[..]];
+    
+        let accounts = vec![
+            ctx.accounts.metadata.to_account_info(),
+            ctx.accounts.mint.to_account_info(),
+            ctx.accounts.mint_authority.to_account_info(),
+            ctx.accounts.payer.to_account_info(),
+            ctx.accounts.update_authority.to_account_info(),
+            ctx.accounts.system_program.to_account_info(),
         ];
-
-        let accounts = metadata_instruction::CreateMetadataAccountsV3 {
-            metadata: ctx.accounts.metadata.key(),
-            mint: ctx.accounts.mint.key(),
-            mint_authority: ctx.accounts.mint_authority.key(),
-            payer: ctx.accounts.payer.key(),
-            update_authority: ctx.accounts.mint_authority.key(),
-            system_program: ctx.accounts.system_program.key(),
-            rent: ctx.accounts.rent.key(),
+    
+        let metadata_data = DataV2 {
+            name,
+            symbol,
+            uri,
+            seller_fee_basis_points: 0, // Adjust as needed
+            creators: None,
+            collection: None,
+            uses: None,
         };
-
-        let instruction = metadata_instruction::create_metadata_accounts_v3(
-            ctx.accounts.token_metadata_program.key(),
-            accounts,
-            mpl_token_metadata::state::DataV2 {
-                name,
-                symbol,
-                uri,
-                seller_fee_basis_points: 0,
-                creators: None,
-                collection: None,
-                uses: None,
-            },
-            true,
-            true,
-            None,
+    
+        let ix = create_metadata_accounts_v3(
+            TOKEN_METADATA_PROGRAM_ID,  // Correct program ID
+            ctx.accounts.metadata.key(), // Metadata account
+            ctx.accounts.mint.key(),     // Mint account
+            ctx.accounts.mint_authority.key(),
+            ctx.accounts.payer.key(),
+            ctx.accounts.update_authority.key(),
+            metadata_data.name.clone(),
+            metadata_data.symbol.clone(),
+            metadata_data.uri.clone(),
+            None, // Creators
+            0,    // Seller fee
+            true, // Is Mutable
+            true, // Is Primary Sale Happened
+            None, // Token Edition
         );
-
-        anchor_lang::solana_program::program::invoke_signed(
-            &instruction,
-            &[
-                ctx.accounts.metadata.to_account_info(),
-                ctx.accounts.mint.to_account_info(),
-                ctx.accounts.mint_authority.to_account_info(),
-                ctx.accounts.payer.to_account_info(),
-                ctx.accounts.mint_authority.to_account_info(),
-                ctx.accounts.system_program.to_account_info(),
-                ctx.accounts.rent.to_account_info(),
-            ],
-            &[signer_seeds],
+    
+        invoke_signed(
+            &ix,
+            &accounts,
+            &[signer_seeds], // Add signer seeds for PDA authority
         )?;
-
-        emit!(CreateMetadataEvent {
-            mint: ctx.accounts.mint.key(),
-            metadata: ctx.accounts.metadata.key(),
-        });
-
+    
         Ok(())
     }
-    */
+
 
     pub fn change_admin(ctx: Context<ChangeAdmin>, new_admin: Pubkey) -> Result<()> {
         let staking_pool = &mut ctx.accounts.staking_pool;
@@ -278,6 +277,27 @@ pub mod sol_staking {
             new_admin,
         });
 
+        Ok(())
+    }
+
+    pub fn set_upgrade_authority(
+        ctx: Context<SetUpgradeAuthority>,
+        new_upgrade_authority: Pubkey,
+    ) -> Result<()> {
+        let staking_pool = &mut ctx.accounts.staking_pool;
+        
+        if new_upgrade_authority == Pubkey::default() {
+            return Err(ErrorCode::InvalidUpgradeAuthority.into());
+        }
+    
+        // Update the upgrade authority
+        staking_pool.upgrade_authority = new_upgrade_authority;
+    
+        emit!(SetUpgradeAuthorityEvent {
+            old_authority: ctx.accounts.current_authority.key(),
+            new_authority: new_upgrade_authority,
+        });
+    
         Ok(())
     }
 }
@@ -394,34 +414,28 @@ pub struct Withdraw<'info> {
 }
 
 // Uncomment if using Metaplex for metadata
-/*
 #[derive(Accounts)]
 pub struct CreateMetadata<'info> {
     #[account(mut)]
-    pub staking_pool: Account<'info, StakingPool>,
+    pub metadata: Signer<'info>,
 
     #[account(mut)]
     pub mint: Account<'info, Mint>,
 
-    /// CHECK: This is safe because it's a PDA that is the mint authority
-    #[account(
-        seeds = [b"mint_authority", staking_pool.key().as_ref()],
-        bump,
-    )]
-    pub mint_authority: AccountInfo<'info>,
+    #[account(signer)]
+    pub mint_authority: Signer<'info>,
 
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    /// CHECK: This account is created by the Metaplex program
-    #[account(mut)]
-    pub metadata: AccountInfo<'info>,
+    #[account(signer)]
+    pub update_authority: Signer<'info>,
 
-    pub token_metadata_program: Program<'info, MplTokenMetadata>,
     pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
+
+    #[account(address = TOKEN_METADATA_PROGRAM_ID)]
+    pub token_metadata_program: Program<'info, mpl_token_metadata::ID>,
 }
-*/
 
 #[derive(Accounts)]
 pub struct ChangeAdmin<'info> {
@@ -436,9 +450,21 @@ pub struct StakingPool {
     pub mint_bump: u8,
     pub treasury: Pubkey,
     pub admin: Pubkey,
+    pub upgrade_authority: Pubkey,
     pub withdrawal_limit: u64,
     pub last_withdrawal: i64,
     pub time_lock: i64,
+}
+
+#[derive(Accounts)]
+pub struct SetUpgradeAuthority<'info> {
+    #[account(
+        mut,
+        constraint = staking_pool.upgrade_authority == current_authority.key() @ ErrorCode::Unauthorized
+    )]
+    pub staking_pool: Account<'info, StakingPool>,
+    
+    pub current_authority: Signer<'info>,
 }
 
 impl<'info> Stake<'info> {
@@ -486,6 +512,9 @@ pub enum ErrorCode {
 
     #[msg("Invalid admin address. The admin cannot be set to the zero address.")]
     InvalidAdminAddress,
+
+    #[msg("Invalid upgrade authority address")]
+    InvalidUpgradeAuthority,
 }
 
 #[event]
@@ -523,4 +552,10 @@ pub struct CreateMetadataEvent {
 pub struct ChangeAdminEvent {
     pub old_admin: Pubkey,
     pub new_admin: Pubkey,
+}
+
+#[event]
+pub struct SetUpgradeAuthorityEvent {
+    pub old_authority: Pubkey,
+    pub new_authority: Pubkey,
 }

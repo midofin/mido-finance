@@ -8,9 +8,22 @@ datasource db {
 }
 
 model User {
-  id            Int      @id @default(autoincrement())
-  walletAddress String   @unique
-  points        Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id            Int                  @id @default(autoincrement())
+  walletAddress String               @unique
+  points        Int                  @default(0)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  stakingPositions StakingPosition[] // One-to-many relationship
+}
+
+model StakingPosition {
+  id                              String   @id @default(uuid())
+  walletAddress                   String   @unique // Ensure this is unique
+  stakedAmount                    Float
+  stakingStartTimestamp           DateTime @default(now())
+  lastRewardCalculationTimestamp  DateTime @default(now())
+  lastVerificationTimestamp       DateTime @default(now())
+  accumulatedPoints               Float    @default(0)
+  isActive                        Boolean  @default(true)
+  user                            User     @relation(fields: [walletAddress], references: [walletAddress])
 }
