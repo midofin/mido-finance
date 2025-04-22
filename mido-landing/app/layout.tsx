@@ -28,11 +28,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <WalletContextProvider>
-      <ParticleBackground />
-
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
+          <ParticleBackground />
           {children}
         </body>
       </WalletContextProvider>
