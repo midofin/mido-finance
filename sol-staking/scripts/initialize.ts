@@ -9,7 +9,7 @@ async function main() {
   const provider = AnchorProvider.env();
   anchor.setProvider(provider);
 
-  const programId = new PublicKey("DXM1sfeUM1SWvaMveCtfHq12nGFUn7m2NULk6Sq165vm");
+  const programId = new PublicKey("F5XkWN1H23Axp34UgZkymELSVKLkXBRzTHq8QmUsggCo");
   const idl = JSON.parse(fs.readFileSync('./target/idl/sol_staking.json', 'utf8'));
   const program = new anchor.Program(idl, programId, provider);
 
