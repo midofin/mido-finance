@@ -4,7 +4,7 @@ use anchor_spl::token::{self, Burn, Mint, MintTo, Token, TokenAccount};
 // Uncomment if using Metaplex for metadata
 // use mpl_token_metadata::instruction as metadata_instruction;
 
-declare_id!("2bkxhcxzEQcMzyL3V5BJV9iGVKMG9ozQCSqWsdAC3h6o");
+declare_id!("F5XkWN1H23Axp34UgZkymELSVKLkXBRzTHq8QmUsggCo");
 
 #[program]
 pub mod sol_staking {

@@ -6,10 +6,10 @@ resolution = true
 skip-lint = false
 
 [programs.devnet]
-sol_staking = "2bkxhcxzEQcMzyL3V5BJV9iGVKMG9ozQCSqWsdAC3h6o"
+sol_staking = "F5XkWN1H23Axp34UgZkymELSVKLkXBRzTHq8QmUsggCo"
 
 [registry]
-url = "https://api.apr.dev"
+url = "https://api.devnet.solana.com"
 
 [provider]
 cluster = "Devnet"
