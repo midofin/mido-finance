@@ -5,14 +5,14 @@ anchor_version = "0.29.0"
 resolution = true
 skip-lint = false
 
-[programs.devnet]
+[programs.testnet]
 sol_staking = "F5XkWN1H23Axp34UgZkymELSVKLkXBRzTHq8QmUsggCo"
 
 [registry]
-url = "https://api.devnet.solana.com"
+url = "https://api.testnet.solana.com"
 
 [provider]
-cluster = "Devnet"
+cluster = "Testnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
