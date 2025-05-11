@@ -2,7 +2,7 @@
     "name": "mSOL",
     "symbol": "MSOL",
     "description": "Liquid staking token for Solana",
-    "image": "https://raw.githubusercontent.com/midofin/mido-finance/refs/heads/main/sol-staking/metadata/logo.png",
+    "image": "https://raw.githubusercontent.com/chinmoykalita/mido-finance/refs/heads/main/sol-staking/metadata/logo.png",
     "external_url": "https://midofinance.com",
     "attributes": [
       {
