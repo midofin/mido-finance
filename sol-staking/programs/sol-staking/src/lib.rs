@@ -1,19 +1,14 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Burn, Mint, MintTo, Token, TokenAccount};
-
-// Uncomment if using Metaplex for metadata
-// use mpl_token_metadata::instruction as metadata_instruction;
-
-declare_id!("F5XkWN1H23Axp34UgZkymELSVKLkXBRzTHq8QmUsggCo");
-// At the top of the file, uncomment:
-use mpl_token_metadata::instructions::create_metadata_accounts_v3;
-use mpl_token_metadata::state::DataV2;
-use anchor_spl::token::{Mint, TokenAccount};
+use mpl_token_metadata::instructions::CreateMetadataAccountV3CpiBuilder;
+use mpl_token_metadata::types::DataV2;
 use mpl_token_metadata::ID as TOKEN_METADATA_PROGRAM_ID;
+
+
 
 // Add this dependency in Cargo.toml:
 // mpl-token-metadata = "1.9.1"
-declare_id!("2bkxhcxzEQcMzyL3V5BJV9iGVKMG9ozQCSqWsdAC3h6o");
+declare_id!("EhE7Rwiw94Lq6GPdG9iafbNV8mUzds5XcfZfJ1GG7184");
 
 #[program]
 pub mod sol_staking {
@@ -49,12 +44,12 @@ pub mod sol_staking {
 
         // Define seeds for the treasury PDA
         let treasury_seeds = &[b"treasury", staking_pool_key.as_ref()];
-        let (treasury_pda, treasury_bump) =
+        let (_, treasury_bump) =
             Pubkey::find_program_address(treasury_seeds, ctx.program_id);
 
         // Create a binding for the treasury bump
         let treasury_bump_binding = [treasury_bump];
-        let treasury_signer_seeds = &[&[
+        let _treasury_signer_seeds = &[&[
             b"treasury",
             staking_pool_key.as_ref(),
             &treasury_bump_binding,
@@ -85,7 +80,7 @@ pub mod sol_staking {
         let cpi_program = ctx.accounts.token_program.to_account_info();
 
         // Define signer seeds for mint authority PDA
-        let mint_authority_seeds = &[&[
+        let _mint_authority_seeds = &[&[
             b"mint_authority",
             staking_pool_key.as_ref(),
             &[staking_pool.mint_bump],
@@ -205,62 +200,66 @@ pub mod sol_staking {
         Ok(())
     }
 
-    // Uncomment if using Metaplex for metadata
     pub fn create_metadata(
         ctx: Context<CreateMetadata>,
         name: String,
         symbol: String,
         uri: String,
     ) -> Result<()> {
-        let metadata_seeds = &[b"metadata", ctx.accounts.mint.key().as_ref()];
-        let signer_seeds = &[&metadata_seeds[..]];
-    
-        let accounts = vec![
-            ctx.accounts.metadata.to_account_info(),
-            ctx.accounts.mint.to_account_info(),
-            ctx.accounts.mint_authority.to_account_info(),
-            ctx.accounts.payer.to_account_info(),
-            ctx.accounts.update_authority.to_account_info(),
-            ctx.accounts.system_program.to_account_info(),
+        // Find the metadata PDA and its bump
+        let mint_key = ctx.accounts.mint.key();
+        let metadata_seeds = &[
+            b"metadata".as_ref(),
+            TOKEN_METADATA_PROGRAM_ID.as_ref(),
+            mint_key.as_ref(),
         ];
+        let (_, metadata_bump) = Pubkey::find_program_address(metadata_seeds, &TOKEN_METADATA_PROGRAM_ID);
+    
+        // Find the mint authority PDA and its bump (using staking pool key)
+        let staking_pool_key = ctx.accounts.staking_pool.key();
+        let mint_authority_seeds = &[
+            b"mint_authority".as_ref(),
+            staking_pool_key.as_ref(),
+        ];
+        let (_, mint_authority_bump) = Pubkey::find_program_address(mint_authority_seeds, ctx.program_id);
     
         let metadata_data = DataV2 {
             name,
             symbol,
             uri,
-            seller_fee_basis_points: 0, // Adjust as needed
+            seller_fee_basis_points: 0,
             creators: None,
             collection: None,
             uses: None,
         };
     
-        let ix = create_metadata_accounts_v3(
-            TOKEN_METADATA_PROGRAM_ID,  // Correct program ID
-            ctx.accounts.metadata.key(), // Metadata account
-            ctx.accounts.mint.key(),     // Mint account
-            ctx.accounts.mint_authority.key(),
-            ctx.accounts.payer.key(),
-            ctx.accounts.update_authority.key(),
-            metadata_data.name.clone(),
-            metadata_data.symbol.clone(),
-            metadata_data.uri.clone(),
-            None, // Creators
-            0,    // Seller fee
-            true, // Is Mutable
-            true, // Is Primary Sale Happened
-            None, // Token Edition
-        );
-    
-        invoke_signed(
-            &ix,
-            &accounts,
-            &[signer_seeds], // Add signer seeds for PDA authority
-        )?;
+        CreateMetadataAccountV3CpiBuilder::new(&ctx.accounts.token_metadata_program)
+            .metadata(&ctx.accounts.metadata)
+            .mint(&ctx.accounts.mint.to_account_info())
+            .mint_authority(&ctx.accounts.mint_authority)
+            .payer(&ctx.accounts.payer)
+            .update_authority(&ctx.accounts.update_authority, true)
+            .is_mutable(true)
+            .data(metadata_data)
+            .system_program(&ctx.accounts.system_program)
+            .invoke_signed(&[
+                &[
+                    b"metadata",
+                    TOKEN_METADATA_PROGRAM_ID.as_ref(),
+                    ctx.accounts.mint.key().as_ref(),
+                    &[metadata_bump],
+                ],
+                &[
+                    b"mint_authority",
+                    staking_pool_key.as_ref(),
+                    &[mint_authority_bump],
+                ],
+            ])?;
     
         Ok(())
     }
 
-
+    // Change the admin of the staking pool
     pub fn change_admin(ctx: Context<ChangeAdmin>, new_admin: Pubkey) -> Result<()> {
         let staking_pool = &mut ctx.accounts.staking_pool;
 
@@ -304,7 +303,12 @@ pub mod sol_staking {
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
-    #[account(init, payer = admin, space = 8 + 32 + 32 + 8 + 8 + 8 + 8)]
+    #[account(
+        init,
+        payer = admin,
+        // Calculate proper space: 8 (discriminator) + 1 (mint_bump) + 32 (treasury) + 32 (admin) + 32 (upgrade_authority) + 8 (withdrawal_limit) + 8 (last_withdrawal) + 8 (time_lock)
+        space = 8 + 1 + 32 + 32 + 32 + 8 + 8 + 8
+    )]
     pub staking_pool: Account<'info, StakingPool>,
 
     #[account(
@@ -413,28 +417,30 @@ pub struct Withdraw<'info> {
     pub treasury: AccountInfo<'info>,
 }
 
-// Uncomment if using Metaplex for metadata
 #[derive(Accounts)]
 pub struct CreateMetadata<'info> {
     #[account(mut)]
-    pub metadata: Signer<'info>,
-
+    pub staking_pool: Account<'info, StakingPool>, // Add staking pool to derive mint authority PDA
+    /// CHECK: This is safe because it's a PDA owned by the token metadata program
+    #[account(mut)]
+    pub metadata: AccountInfo<'info>,
     #[account(mut)]
     pub mint: Account<'info, Mint>,
-
-    #[account(signer)]
-    pub mint_authority: Signer<'info>,
-
+    /// CHECK: This is safe because it's a PDA that will be the mint authority
+    #[account(
+        seeds = [b"mint_authority", staking_pool.key().as_ref()],
+        bump,
+    )]
+    pub mint_authority: AccountInfo<'info>, // Removed #[account(signer)]
     #[account(mut)]
     pub payer: Signer<'info>,
-
+    /// CHECK: This is safe because it's a PDA that will be the update authority
     #[account(signer)]
-    pub update_authority: Signer<'info>,
-
+    pub update_authority: AccountInfo<'info>,
     pub system_program: Program<'info, System>,
-
+    /// CHECK: This is the token metadata program
     #[account(address = TOKEN_METADATA_PROGRAM_ID)]
-    pub token_metadata_program: Program<'info, mpl_token_metadata::ID>,
+    pub token_metadata_program: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -447,13 +453,13 @@ pub struct ChangeAdmin<'info> {
 
 #[account]
 pub struct StakingPool {
-    pub mint_bump: u8,
-    pub treasury: Pubkey,
-    pub admin: Pubkey,
-    pub upgrade_authority: Pubkey,
-    pub withdrawal_limit: u64,
-    pub last_withdrawal: i64,
-    pub time_lock: i64,
+    pub mint_bump: u8,          // 1 byte
+    pub treasury: Pubkey,       // 32 bytes
+    pub admin: Pubkey,          // 32 bytes
+    pub upgrade_authority: Pubkey, // 32 bytes
+    pub withdrawal_limit: u64,  // 8 bytes
+    pub last_withdrawal: i64,   // 8 bytes
+    pub time_lock: i64,         // 8 bytes
 }
 
 #[derive(Accounts)]
@@ -468,6 +474,7 @@ pub struct SetUpgradeAuthority<'info> {
 }
 
 impl<'info> Stake<'info> {
+    #[allow(dead_code)]
     fn into_mint_context(&self) -> CpiContext<'_, '_, '_, 'info, MintTo<'info>> {
         CpiContext::new(
             self.token_program.to_account_info(),
