@@ -50,7 +50,7 @@ const StakingPage: React.FC = () => {
   const [stakeAmountSOL, setStakeAmountSOL] = useState("")
   const [unstakeAmountMiSOL, setUnstakeAmountMiSOL] = useState("")
   const [stakeDuration, setStakeDuration] = useState(30)
-  const [estimatedRewards, setEstimatedRewards] = useState(0)
+  const [estimatedPoints, setEstimatedPoints] = useState(0)
   const [totalValueLocked, setTotalValueLocked] = useState(1000000) // Mock TVL
   const [currentApy, setCurrentApy] = useState(6.2) // Mock APY
   const [isAutoCompound, setIsAutoCompound] = useState(false)
@@ -122,73 +122,196 @@ const StakingPage: React.FC = () => {
   const getWalletBalance = async () => {
     if (!publicKey) {
       setBalance(null)
-      return
+      return null
     }
 
     try {
+      console.log("Fetching wallet balance for:", publicKey.toBase58())
       const balanceInLamports = await connection.getBalance(publicKey)
       const balanceInSOL = balanceInLamports / LAMPORTS_PER_SOL
+      console.log("Wallet balance:", balanceInSOL)
       setBalance(balanceInSOL)
+      return balanceInSOL
     } catch (error) {
       console.error("Failed to get wallet balance:", error)
       setBalance(null)
+      return null
     }
   }
 
   const getMiSOLBalance = async () => {
-    if (!publicKey) {
+    if (!publicKey || !mintPublicKey) {
       setMiSOLBalance(null)
-      return
+      return null
     }
 
     try {
+      console.log("Fetching miSOL balance for:", publicKey.toBase58())
       const userMsolAccount = await getAssociatedTokenAddress(mintPublicKey, publicKey)
+      console.log("miSOL ATA:", userMsolAccount.toBase58())
       const msolAccountInfo = await connection.getTokenAccountBalance(userMsolAccount)
       const msolBalance = msolAccountInfo.value.uiAmount || 0
+      console.log("miSOL balance:", msolBalance)
       setMiSOLBalance(msolBalance)
+      return msolBalance
     } catch (error: any) {
+      console.log("miSOL balance error:", error)
       if (error.code === "AccountNotFound") {
         setMiSOLBalance(0)
+        return 0
       } else {
         console.error("Failed to get miSOL balance:", error)
-        setMiSOLBalance(null)
+        setMiSOLBalance(0)
+        return 0
       }
     }
   }
 
+  // Initial balance fetch on wallet connection
   useEffect(() => {
-    if (publicKey) {
-      getWalletBalance()
-      getMiSOLBalance()
-    } else {
-      setBalance(null)
-      setMiSOLBalance(null)
+    let mounted = true;
+    let balanceSubscription: number | undefined;
+    let miSolSubscription: number | undefined;
+
+    const fetchBalances = async () => {
+      if (!publicKey) {
+        console.log("Wallet disconnected, resetting balances...")
+        if (mounted) {
+          setBalance(null)
+          setMiSOLBalance(null)
+          setStakeAmountSOL("")
+          setUnstakeAmountMiSOL("")
+          setIsStaking(false)
+          setIsUnstaking(false)
+        }
+        return;
+      }
+
+      console.log("Wallet connected, fetching balances...")
+      try {
+        // Add a small delay to ensure wallet is fully connected
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        if (!mounted || !publicKey) return;
+
+        const [solBalance, miSolBalance] = await Promise.all([
+          getWalletBalance(),
+          getMiSOLBalance()
+        ]);
+
+        if (!mounted || !publicKey) return;
+
+        // Force a re-render by setting state
+        if (solBalance !== null) setBalance(solBalance);
+        if (miSolBalance !== null) setMiSOLBalance(miSolBalance);
+
+        // Set up SOL balance subscription
+        balanceSubscription = connection.onAccountChange(
+          publicKey,
+          async () => {
+            if (!mounted || !publicKey) return;
+            console.log("SOL balance changed, updating...")
+            try {
+              await getWalletBalance()
+            } catch (error) {
+              console.error("Error updating SOL balance:", error)
+            }
+          },
+          "confirmed"
+        );
+
+        // Set up miSOL balance subscription
+        if (mintPublicKey) {
+          try {
+            const userMsolAccount = await getAssociatedTokenAddress(mintPublicKey, publicKey);
+            miSolSubscription = connection.onAccountChange(
+              userMsolAccount,
+              async () => {
+                if (!mounted || !publicKey) return;
+                console.log("miSOL balance changed, updating...")
+                try {
+                  await getMiSOLBalance()
+                } catch (error) {
+                  console.error("Error updating miSOL balance:", error)
+                }
+              },
+              "confirmed"
+            );
+          } catch (error) {
+            console.error("Failed to set up miSOL subscription:", error)
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching initial balances:", error)
+        toast.error("Failed to fetch initial balances")
+      }
     }
-  }, [publicKey, connection])
+
+    fetchBalances()
+
+    return () => {
+      mounted = false;
+      if (balanceSubscription) {
+        connection.removeAccountChangeListener(balanceSubscription)
+      }
+      if (miSolSubscription) {
+        connection.removeAccountChangeListener(miSolSubscription)
+      }
+    }
+  }, [publicKey, connection, mintPublicKey])
+
+  // Force balance refresh when connection changes
+  useEffect(() => {
+    if (!publicKey) return;
+
+    let mounted = true;
+    console.log("Connection changed, refreshing balances...")
+    
+    const refreshBalances = async () => {
+      if (!mounted || !publicKey) return;
+      try {
+        await Promise.all([
+          getWalletBalance(),
+          getMiSOLBalance()
+        ])
+      } catch (error) {
+        console.error("Error refreshing balances after connection change:", error)
+      }
+    }
+
+    refreshBalances()
+
+    return () => {
+      mounted = false;
+    }
+  }, [connection, publicKey])
 
   useEffect(() => {
-    const calculateRewards = () => {
+    const calculatePoints = () => {
       if (!stakeAmountSOL || parseFloat(stakeAmountSOL) <= 0) {
-        setEstimatedRewards(0)
+        setEstimatedPoints(0)
         return
       }
 
       const stakeSOL = parseFloat(stakeAmountSOL)
-      const durationInYears = stakeDuration / 365
-      const compoundFrequency = isAutoCompound ? 365 : 1
-      const rate = currentApy / 100
-
-      const rewards = stakeSOL * Math.pow(1 + rate / compoundFrequency, compoundFrequency * durationInYears) - stakeSOL
-      setEstimatedRewards(rewards)
+      const hoursStaked = stakeDuration * 24
+      const BASE_POINTS_PER_SOL_PER_HOUR = 10
+      const pointsEarned = stakeSOL * BASE_POINTS_PER_SOL_PER_HOUR * hoursStaked
+      const timeMultiplier = 1 + Math.min(hoursStaked / 720, 0.5) // Max 50% bonus after 30 days
+      setEstimatedPoints(Math.round(pointsEarned * timeMultiplier))
     }
 
-    calculateRewards()
-  }, [stakeAmountSOL, stakeDuration, isAutoCompound, currentApy])
+    calculatePoints()
+  }, [stakeAmountSOL, stakeDuration])
 
   // Handle Stake Function
   const handleStake = async () => {
+    if (!publicKey) {
+      toast.error("Please connect your wallet to stake SOL and get miSOL.");
+      return;
+    }
+
     if (
-      !publicKey ||
       !program ||
       !anchorWallet ||
       !mintPublicKey ||
@@ -196,8 +319,8 @@ const StakingPage: React.FC = () => {
       !stakingPoolPublicKey ||
       !treasuryPda
     ) {
-      console.error("Wallet not connected or program not initialized");
-      toast.error("Please connect your wallet to stake SOL and get miSOL.");
+      console.error("Program not initialized");
+      toast.error("Failed to initialize staking program. Please try again.");
       return;
     }
 
@@ -207,6 +330,7 @@ const StakingPage: React.FC = () => {
       return;
     }
 
+    setIsStaking(true);
     try {
       console.log("Initiating stake...");
 
@@ -346,13 +470,21 @@ const StakingPage: React.FC = () => {
       } else {
         toast.error(`Failed to stake tokens: ${(error as Error).message}`);
       }
+    } finally {
+      setIsStaking(false);
     }
   };
 
   // Handle Unstake Function
   const handleUnstake = async () => {
-    if (!publicKey || !program || !anchorWallet || !mintPublicKey || !mintAuthorityPda || !stakingPoolPublicKey || !treasuryPda) {
+    if (!publicKey) {
       toast.error("Please connect your wallet to unstake miSOL.");
+      return;
+    }
+
+    if (!program || !anchorWallet || !mintPublicKey || !mintAuthorityPda || !stakingPoolPublicKey || !treasuryPda) {
+      console.error("Program not initialized");
+      toast.error("Failed to initialize unstaking program. Please try again.");
       return;
     }
 
@@ -361,6 +493,7 @@ const StakingPage: React.FC = () => {
       return;
     }
 
+    setIsUnstaking(true);
     try {
       console.log("Initiating unstake...");
 
@@ -444,6 +577,8 @@ const StakingPage: React.FC = () => {
       } else {
         toast.error(`Failed to unstake tokens: ${(error as Error).message}`);
       }
+    } finally {
+      setIsUnstaking(false);
     }
   };
 
@@ -467,12 +602,12 @@ const StakingPage: React.FC = () => {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="text-5xl font-bold text-center text-green-400 mb-12"
+              className="text-3xl font-bold text-center text-green-400 mb-12"
             >
               MIDO Liquid Staking
             </motion.h1>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="w-full max-w-3xl mx-auto">
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -487,7 +622,7 @@ const StakingPage: React.FC = () => {
                     {publicKey ? (
                       <>
                         <div className="flex justify-between items-center bg-gray-700 p-4 rounded-lg">
-                          <h2 className="flex items-center text-lg">
+                          <h2 className="flex items-center text-lg text-white">
                             <TrendingUp className="mr-2 text-green-400" /> Wallet Balance
                           </h2>
                           {balance !== null ? (
@@ -498,14 +633,14 @@ const StakingPage: React.FC = () => {
                         </div>
 
                         <div className="flex justify-between items-center bg-gray-700 p-4 rounded-lg">
-                          <h2 className="flex items-center text-lg">
+                          <h2 className="flex items-center text-lg text-white">
                             <Lock className="mr-2 text-green-400" /> miSOL Balance
                           </h2>
                           {miSOLBalance !== null ? (
                             miSOLBalance > 0 ? (
                               <p className="text-green-400 text-xl font-bold">{miSOLBalance.toFixed(4)} miSOL</p>
                             ) : (
-                              <p className="text-gray-400">No miSOL staked.</p>
+                              <p className="text-gray-400">0 miSOL</p>
                             )
                           ) : (
                             <p className="text-gray-400">Loading miSOL balance...</p>
@@ -513,7 +648,7 @@ const StakingPage: React.FC = () => {
                         </div>
                       </>
                     ) : (
-                      <p className="text-center text-gray-400">Please connect your wallet to view your balances.</p>
+                      <p className="text-center text-gray-400">Please connect your wallet to view your balances. (refresh the page if you just connected your wallet and balances are not loading)</p>
                     )}
 
                     <div className="flex justify-center">
@@ -527,7 +662,7 @@ const StakingPage: React.FC = () => {
                       </TabsList>
                       <TabsContent value="stake" className="mt-4">
                         <div className="space-y-4">
-                          <Label htmlFor="stake-amount" className="text-gray-300">
+                          <Label htmlFor="stake-amount" className="text-white">
                             Amount to Stake (SOL)
                           </Label>
                           <div className="flex space-x-2">
@@ -547,7 +682,7 @@ const StakingPage: React.FC = () => {
                           </div>
 
                           <div className="space-y-4">
-                            <Label htmlFor="stake-duration" className="text-gray-300">
+                            <Label htmlFor="stake-duration" className="text-white">
                               Stake Duration: {stakeDuration} days
                             </Label>
                             <Slider
@@ -561,26 +696,23 @@ const StakingPage: React.FC = () => {
                             />
                           </div>
 
-                          <div className="flex items-center space-x-2">
-                            <Switch id="auto-compound" checked={isAutoCompound} onCheckedChange={setIsAutoCompound} />
-                            <Label htmlFor="auto-compound" className="text-gray-300">
-                              Auto-compound rewards
-                            </Label>
-                          </div>
-
                           <div className="p-4 bg-gray-700 rounded-lg">
-                            <div className="text-sm font-semibold text-green-400">Estimated Rewards</div>
-                            <div className="text-3xl font-bold text-green-500">{formatNumber(estimatedRewards)} miSOL</div>
+                            <div className="text-sm font-semibold text-green-400">Estimated Points</div>
+                            <div className="text-3xl font-bold text-green-500">{formatNumber(estimatedPoints)} points</div>
                           </div>
 
-                          <Button onClick={handleStake} className="w-full bg-green-600 hover:bg-green-700 transition-colors duration-300">
-                            Stake SOL
+                          <Button 
+                            onClick={handleStake} 
+                            className="w-full bg-green-600 hover:bg-green-700 transition-colors duration-300"
+                            disabled={isStaking}
+                          >
+                            {isStaking ? "Staking..." : "Stake SOL"}
                           </Button>
                         </div>
                       </TabsContent>
                       <TabsContent value="unstake" className="mt-4">
                         <div className="space-y-4">
-                          <Label htmlFor="unstake-amount" className="text-gray-300">
+                          <Label htmlFor="unstake-amount" className="text-white">
                             Amount to Unstake (miSOL)
                           </Label>
                           <div className="flex space-x-2">
@@ -606,8 +738,12 @@ const StakingPage: React.FC = () => {
                             </div>
                           </div>
 
-                          <Button onClick={handleUnstake} className="w-full bg-red-600 hover:bg-red-700 transition-colors duration-300">
-                            Unstake miSOL
+                          <Button 
+                            onClick={handleUnstake} 
+                            className="w-full bg-red-600 hover:bg-red-700 transition-colors duration-300"
+                            disabled={isUnstaking}
+                          >
+                            {isUnstaking ? "Unstaking..." : "Unstake miSOL"}
                           </Button>
                         </div>
                       </TabsContent>
@@ -617,140 +753,26 @@ const StakingPage: React.FC = () => {
               </motion.div>
 
               <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                className="mt-12"
               >
-                <Card className="bg-gray-800 border-gray-700 shadow-lg hover:shadow-green-500/10 transition-shadow duration-300">
+                <Card className="bg-gray-800 border-gray-700 shadow-lg hover:shadow-green-500/10 transition-all duration-300">
                   <CardHeader>
-                    <CardTitle className="text-green-400 text-2xl">Staking Overview</CardTitle>
-                    <CardDescription className="text-gray-400">
-                      Platform statistics and your potential earnings
-                    </CardDescription>
+                    <CardTitle className="text-green-400 text-2xl">Learn More</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-6">
-                    <Tabs defaultValue="overview">
-                      <TabsList className="grid w-full grid-cols-2 bg-gray-700">
-                        <TabsTrigger value="overview" className="data-[state=active]:bg-green-500 data-[state=active]:text-white transition-colors duration-300">Overview</TabsTrigger>
-                        <TabsTrigger value="history" className="data-[state=active]:bg-green-500 data-[state=active]:text-white transition-colors duration-300">APY History</TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="overview">
-                        <div className="space-y-6">
-                          <div className="flex items-center justify-between bg-gray-700 p-4 rounded-lg">
-                            <span className="flex items-center text-gray-300">
-                              <TrendingUp className="mr-2 text-green-400" /> Current APY:
-                            </span>
-                            <span className="font-bold text-green-400 text-xl">{currentApy}%</span>
-                          </div>
-
-                          <div className="flex items-center justify-between bg-gray-700 p-4 rounded-lg">
-                            <span className="flex items-center text-gray-300">
-                              <Lock className="mr-2 text-green-400" /> Total Value Locked:
-                            </span>
-                            <span className="font-bold text-white text-xl">{formatNumber(totalValueLocked)} SOL</span>
-                          </div>
-
-                          <div className="space-y-4">
-                            <Label className="text-gray-300">Risk Level</Label>
-                            <div className="flex space-x-2">
-                              {["low", "medium", "high"].map((level) => (
-                                <Button
-                                  key={level}
-                                  variant={riskLevel === level ? "default" : "outline"}
-                                  onClick={() => setRiskLevel(level)}
-                                  className={`flex-1 capitalize ${riskLevel === level
-                                    ? 'bg-green-500 text-white'
-                                    : 'hover:bg-green-500 hover:text-white'
-                                    } transition-colors duration-300`}
-                                >
-                                  {level}
-                                </Button>
-                              ))}
-                            </div>
-                          </div>
-
-                          {riskLevel !== "low" && (
-                            <div className="flex items-center space-x-2 text-yellow-400 bg-yellow-400/20 p-4 rounded-lg">
-                              <AlertTriangle size={20} />
-                              <span className="text-sm">
-                                Higher risk levels may offer better rewards but come with increased volatility.
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </TabsContent>
-                      <TabsContent value="history">
-                        <div className="h-80">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={apyHistory}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                              <XAxis dataKey="month" stroke="#9CA3AF" />
-                              <YAxis stroke="#9CA3AF" />
-                              <Tooltip contentStyle={{ backgroundColor: "#1F2937", border: "none", borderRadius: "8px" }} />
-                              <Line
-                                type="monotone"
-                                dataKey="apy"
-                                stroke="#10B981"
-                                strokeWidth={3}
-                                dot={{ fill: "#10B981", strokeWidth: 2 }}
-                                activeDot={{ r: 8 }}
-                              />
-                            </LineChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </TabsContent>
-                    </Tabs>
+                  <CardContent className="space-y-4">
+                    <p className="text-gray-300">
+                      Discover how MIDO Finance is revolutionizing eco-friendly investments through blockchain technology.
+                    </p>
+                    <Button variant="outline" className="w-full hover:bg-green-500 hover:text-white transition-colors duration-300">
+                      <ArrowUpRight className="mr-2 h-4 w-4" /> Explore MIDO Ecosystem
+                    </Button>
                   </CardContent>
                 </Card>
               </motion.div>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
-              {[
-                { icon: Leaf, title: "Eco-Friendly", description: "Support sustainable projects by staking SOL and getting miSOL." },
-                { icon: TrendingUp, title: "High Yield", description: "Earn competitive returns while contributing to a greener future." },
-                { icon: Info, title: "Low Risk", description: "Our staking mechanism is designed to minimize risk and maximize returns." }
-              ].map((item, index) => (
-                <motion.div
-                  key={item.title}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                >
-                  <Card className="bg-gray-800 border-gray-700 shadow-lg hover:shadow-green-500/10 transition-all duration-300 hover:-translate-y-1">
-                    <CardHeader>
-                      <CardTitle className="flex items-center text-green-400">
-                        <item.icon className="mr-2" /> {item.title}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-gray-300">
-                      {item.description}
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-              className="mt-12"
-            >
-              <Card className="bg-gray-800 border-gray-700 shadow-lg hover:shadow-green-500/10 transition-all duration-300">
-                <CardHeader>
-                  <CardTitle className="text-green-400 text-2xl">Learn More</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-gray-300">
-                    Discover how MIDO Finance is revolutionizing eco-friendly investments through blockchain technology.
-                  </p>
-                  <Button variant="outline" className="w-full hover:bg-green-500 hover:text-white transition-colors duration-300">
-                    <ArrowUpRight className="mr-2 h-4 w-4" /> Explore MIDO Ecosystem
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
           </main>
         </div>
       </div>

@@ -4,10 +4,6 @@ use mpl_token_metadata::instructions::CreateMetadataAccountV3CpiBuilder;
 use mpl_token_metadata::types::DataV2;
 use mpl_token_metadata::ID as TOKEN_METADATA_PROGRAM_ID;
 
-
-
-// Add this dependency in Cargo.toml:
-// mpl-token-metadata = "1.9.1"
 declare_id!("EhE7Rwiw94Lq6GPdG9iafbNV8mUzds5XcfZfJ1GG7184");
 
 #[program]
